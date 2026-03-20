@@ -36,62 +36,21 @@ begin
 
     if p_lista_subcategorias_json is null 
     or json_length(p_lista_subcategorias_json) = 0 then
-        signal sqlstate '45000'
-        set message_text = 'json de subcategorias vacio';
+    signal sqlstate '45000'
+    set message_text = 'json de subcategorias vacio';
     end if;
 
     start transaction;
 
-    insert into presupuesto(
-        id_usuario,
-        nombre,
-        descripcion,
-        year_inicio,
-        mes_inicio,
-        year_fin,
-        mes_fin,
-        total_ingresos,
-        total_gastos,
-        total_ahorro,
-        fecha_hora_creacion,
-        estado,
-        creado_user,
-        creado_fecha
-    )
-    values(
-        p_id_usuario,
-        p_nombre,
-        p_descripcion,
-        p_year_inicio,
-        p_mes_inicio,
-        p_year_fin,
-        p_mes_fin,
-        0.00,
-        0.00,
-        0.00,
-        current_timestamp(),
-        1,
-        p_creado_por,
-        current_timestamp()
-    );
+    insert into presupuesto( d_usuario,nombre,descripcion,year_inicio,mes_inicio, year_fin, mes_fin, total_ingresos, total_gastos, total_ahorro, fecha_hora_creacion,
+    estado, creado_user, creado_fecha)
+    values(p_id_usuario, p_nombre, p_descripcion, p_year_inicio, p_mes_inicio, p_year_fin, p_mes_fin, 0.00, 0.00, 0.00, current_timestamp(), 1, p_creado_por, current_timestamp());
 
     set v_id_presupuesto = last_insert_id();
 
-    insert into presupuesto_detalle(
-        id_presupuesto,
-        id_subcategoria,
-        monto_mensual,
-        observaciones,
-        creado_user,
-        creado_fecha
-    )
+    insert into presupuesto_detalle( id_presupuesto, id_subcategoria, monto_mensual, observaciones, creado_user, creado_fecha )
     select
-        v_id_presupuesto,
-        jt.id_subcategoria,
-        jt.monto_mensual,
-        null,
-        p_creado_por,
-        current_timestamp()
+        v_id_presupuesto,jt.id_subcategoria,jt.monto_mensual,null, p_creado_por, current_timestamp()
     from json_table(
         p_lista_subcategorias_json,
         '$[*]' columns (
@@ -100,56 +59,25 @@ begin
         )
     ) jt;
 
-    select
-        ifnull(sum(case when c.tipo='ingreso' then pd.monto_mensual else 0 end),0),
-        ifnull(sum(case when c.tipo='gasto' then pd.monto_mensual else 0 end),0),
+    select ifnull(sum(case when c.tipo='ingreso' then pd.monto_mensual else 0 end),0), ifnull(sum(case when c.tipo='gasto' then pd.monto_mensual else 0 end),0),
         ifnull(sum(case when c.tipo='ahorro' then pd.monto_mensual else 0 end),0)
-    into
-        v_total_ingresos,
-        v_total_gastos,
-        v_total_ahorro
+    into v_total_ingresos, v_total_gastos, v_total_ahorro
     from presupuesto_detalle pd
-    join subcategoria s
+    inner join subcategoria s
         on s.id_subcategoria = pd.id_subcategoria
-    join categoria c
+    inner join categoria c
         on c.id_categoria = s.id_categoria
     where pd.id_presupuesto = v_id_presupuesto;
 
     update presupuesto
-    set total_ingresos = v_total_ingresos,
-        total_gastos = v_total_gastos,
-        total_ahorro = v_total_ahorro,
-        modificado_user = p_creado_por,
-        modificado_fecha = current_timestamp()
+    set total_ingresos = v_total_ingresos,total_gastos = v_total_gastos, total_ahorro = v_total_ahorro, modificado_user = p_creado_por, modificado_fecha = current_timestamp()
     where id_presupuesto = v_id_presupuesto;
-
     commit;
-
-    select
-        v_id_presupuesto as id_presupuesto_creado,
-        v_total_ingresos as total_ingresos,
-        v_total_gastos as total_gastos,
-        v_total_ahorro as total_ahorro;
-
+    select v_id_presupuesto as id_presupuesto_creado, v_total_ingresos as total_ingresos, v_total_gastos as total_gastos, v_total_ahorro as total_ahorro;
 end $$
-
 delimiter ;
-
-call sp_crear_presupuesto_completo(
-1,
-'presupuesto ganado trabajo-mesada',
-'primer trimestre',
-2026,
-1,
-2026,
-3,
-'[
- {"id_subcategoria":3,"monto_mensual":20000},
- {"id_subcategoria":4,"monto_mensual":1000}
-]',
-'esdras'
-);
-
+call sp_crear_presupuesto_completo(1,'presupuesto ganado trabajo-mesada','primer trimestre',2026,1,2026,3,
+'[ {"id_subcategoria":3,"monto_mensual":20000}, {"id_subcategoria":4,"monto_mensual":1000}]','esdras');
 
 delimiter $$
 drop procedure if exists sp_registrar_transaccion_completa $$
@@ -212,12 +140,12 @@ begin
     where s.id_subcategoria = p_id_subcategoria;
 
     if v_tipo_categoria is null then
-        signal sqlstate '45000'
-        set message_text = 'la subcategoria no existe';
+    signal sqlstate '45000'
+    set message_text = 'la subcategoria no existe';
     end if;
 
     if lower(v_tipo_categoria) <> lower(p_tipo) then
-    signal sqlstate '45000'
+     signal sqlstate '45000'
     set message_text = 'el tipo de transaccion no coincide con el tipo de la categoria';
     end if;
 
@@ -234,71 +162,30 @@ begin
 
     start transaction;
 
-    insert into transaccion(
-    id_presupuesto_detalle,
-    year,
-    mes,
-    tipo_transaccion,
-    descripcion,
-    monto,
-    fecha,
-    metodo_pago,
-    creado_user,
-    creado_fecha
-    )
-    values(
-    v_id_presupuesto_detalle,
-    p_anio,
-    p_mes,
-    p_tipo,
-    p_descripcion,
-    p_monto,
-    p_fecha,
-    p_metodo_pago,
-    p_creado_por,
-        current_timestamp()
-    );
-
+    insert into transaccion(id_presupuesto_detalle,  year, mes, tipo_transaccion, descripcion, monto, fecha, metodo_pago, creado_user,
+    creado_fecha )
+    values( v_id_presupuesto_detalle, p_anio, p_mes, p_tipo, p_descripcion, p_monto, p_fecha, p_metodo_pago, p_creado_por, current_timestamp());
     commit;
-
     select last_insert_id() as id_transaccion_creada;
 end $$
 
 delimiter ;
 
-call sp_registrar_transaccion_completa(
-    1,
-    4003,
-    2026,
-    1,
-    1,
-    'gasto',
-    'canje de loteria',
-    850.00,
-    '2026-01-15',
-    'efectivo',
-    'esdras'
-);
+call sp_registrar_transaccion_completa( 1, 4003, 2026, 1, 1, 'gasto', 'canje de loteria', 850.00, '2026-01-15', 'efectivo', 'esdras');
 
 delimiter $$
-
 drop procedure if exists sp_procesar_obligaciones_mes $$
-
 create procedure sp_procesar_obligaciones_mes(p_id_usuario int, p_anio int, p_mes int, p_id_presupuesto int)
 begin
-	
     declare v_existe_presupuesto int default 0;
     declare v_fecha_inicio_mes date;
     declare v_fecha_fin_mes date;
     declare v_hoy date;
-
     set v_hoy = curdate();
-
     if p_mes < 1 or p_mes > 12 then
     signal sqlstate '45000'
     set message_text = 'mes invalido';
     end if;
-
     select count(*)
     into v_existe_presupuesto
     from presupuesto
@@ -334,21 +221,19 @@ begin
         end as dias_restantes
     from obligacion_fija o
     inner join subcategoria s
-        on s.id_subcategoria = o.id_subcategoria
-    inner join categoria c
-        on c.id_categoria = s.id_categoria
+    on s.id_subcategoria = o.id_subcategoria inner join categoria c
+    on c.id_categoria = s.id_categoria
     inner join presupuesto_detalle pd
-        on pd.id_subcategoria = s.id_subcategoria
+     on pd.id_subcategoria = s.id_subcategoria
     inner join presupuesto p
-        on p.id_presupuesto = pd.id_presupuesto
+    on p.id_presupuesto = pd.id_presupuesto
     where p.id_presupuesto = p_id_presupuesto
-      and p.id_usuario = p_id_usuario
-      and o.vigente = 1
-      and (o.fecha_inicio is null or o.fecha_inicio <= v_fecha_fin_mes)
-      and (o.fecha_finalizacion is null or o.fecha_finalizacion >= v_fecha_inicio_mes)
+    and p.id_usuario = p_id_usuario
+    and o.vigente = 1
+    and (o.fecha_inicio is null or o.fecha_inicio <= v_fecha_fin_mes)
+    and (o.fecha_finalizacion is null or o.fecha_finalizacion >= v_fecha_inicio_mes)
     order by
-        fecha_vencimiento_mes,
-        o.nombre;
+        fecha_vencimiento_mes,o.nombre;
 
 end $$
 
