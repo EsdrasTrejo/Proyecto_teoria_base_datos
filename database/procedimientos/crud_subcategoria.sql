@@ -12,7 +12,7 @@ begin
     set message_text = 'el id de la categoria es invalido';
     end if;
     if not exists (select 1 from categoria
-        where id_categoria = p_id_categoria
+    where id_categoria = p_id_categoria
     ) then
     
     
@@ -47,29 +47,13 @@ begin
     set message_text = 'ya existe una subcategoria con ese nombre en la categoria';
     end if;
     if p_es_defecto = 1 and exists ( select 1 from subcategoria
-        where id_categoria = p_id_categoria and es_defecto = 1 and indicador_activa = 1) then
-        signal sqlstate '45000'
-        set message_text = 'ya existe una subcategoria por defecto activa para esta categoria';
+    where id_categoria = p_id_categoria and es_defecto = 1 and indicador_activa = 1) then
+    signal sqlstate '45000'
+    set message_text = 'ya existe una subcategoria por defecto activa para esta categoria';
     end if;
-
-    insert into subcategoria(
-        id_categoria,
-        nombre,
-        descripcion,
-        es_defecto,
-        creado_user,
-        creado_fecha
-    )
-    values(
-        p_id_categoria,
-        trim(p_nombre),
-        trim(p_descripcion),
-        p_es_defecto,
-        trim(p_creado_por),
-        current_timestamp
-    );
+    insert into subcategoria( id_categoria, nombre, descripcion, es_defecto, creado_user, creado_fecha )
+    values(p_id_categoria,trim(p_nombre),trim(p_descripcion), p_es_defecto,trim(p_creado_por),current_timestamp);
 end $$
-
 delimiter ;
 
 call sp_insertar_subcategoria(2001,'libros','libros texto que necesito',1,'esdras');
@@ -81,21 +65,24 @@ create procedure sp_actualizar_subcategoria( p_id_subcategoria int, p_nombre var
 begin
     declare v_id_categoria int;
     if p_id_subcategoria is null or p_id_subcategoria <= 0 then
-        signal sqlstate '45000'
-        set message_text = 'el id de la subcategoria es invalido';
+    signal sqlstate '45000'
+    set message_text = 'el id de la subcategoria es invalido';
     end if;
+
     if not exists ( select 1 from subcategoria
     where id_subcategoria = p_id_subcategoria) then
-        signal sqlstate '45000'
-        set message_text = 'la subcategoria no existe';
+    signal sqlstate '45000'
+    set message_text = 'la subcategoria no existe';
     end if;
+    
     if p_nombre is null or trim(p_nombre) = '' then
-      signal sqlstate '45000'
-     set message_text = 'el nombre de la subcategoria no puede ser nulo o vacio';
+    signal sqlstate '45000'
+    set message_text = 'el nombre de la subcategoria no puede ser nulo o vacio';
     end if;
+    
     if p_descripcion is null or trim(p_descripcion) = '' then
     signal sqlstate '45000'
-      set message_text = 'la descripcion no puede ser nula o vacia';
+    set message_text = 'la descripcion no puede ser nula o vacia';
     end if;
 
     if p_modificado is null or trim(p_modificado) = '' then
@@ -105,13 +92,14 @@ begin
 
     select id_categoria into v_id_categoria
     from subcategoria
-     where id_subcategoria = p_id_subcategoria;
+    where id_subcategoria = p_id_subcategoria;
     if exists ( select 1 from subcategoria
-        where id_categoria = v_id_categoria and lower(trim(nombre)) = lower(trim(p_nombre)) and id_subcategoria <> p_id_subcategoria
+     where id_categoria = v_id_categoria and lower(trim(nombre)) = lower(trim(p_nombre)) and id_subcategoria <> p_id_subcategoria
     ) then
-        signal sqlstate '45000'
-        set message_text = 'ya existe otra subcategoria con ese nombre en la categoria';
+    signal sqlstate '45000'
+    set message_text = 'ya existe otra subcategoria con ese nombre en la categoria';
     end if;
+    
     update subcategoria
     set nombre = trim(p_nombre), descripcion = trim(p_descripcion), modificado_user = trim(p_modificado), modificado_fecha = current_timestamp
     where id_subcategoria = p_id_subcategoria;
@@ -148,14 +136,12 @@ begin
     set message_text = 'la subcategoria no existe';
     end if;
     if exists ( select 1 from presupuesto_detalle
-        where id_subcategoria = p_id_subcategoria
-    ) then
+    where id_subcategoria = p_id_subcategoria) then
    signal sqlstate '45000'
    set message_text = 'no se puede eliminar la subcategoria porque esta en uso en presupuestos';
     end if;
     if exists ( select 1 from transaccion
-        where id_subcategoria = p_id_subcategoria
-    ) then
+    where id_subcategoria = p_id_subcategoria) then
     signal sqlstate '45000'
     set message_text = 'no se puede eliminar la subcategoria porque esta en uso en transacciones';
     end if;
