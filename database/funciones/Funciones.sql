@@ -14,10 +14,8 @@ begin
     where id_subcategoria = p_id_subcategoria
     and anio = p_anio
     and mes = p_mes;
-
     return v_monto_ejecutado;
 end $$
-
 delimiter ;
 
 delimiter $$
@@ -30,20 +28,20 @@ begin
     declare v_monto_ejecutado decimal(12,2);
     declare v_monto_presupuestado decimal(12,2);
     declare v_porcentaje decimal(10,2);
-    -- monto ejecutado (transacciones)
+
     select ifnull(sum(monto),0)
     into v_monto_ejecutado
     from transaccion
     where id_subcategoria = p_id_subcategoria
       and anio = p_anio
       and mes = p_mes;
-    -- monto presupuestado
+    
     select monto_mensual
     into v_monto_presupuestado
     from presupuesto_detalle
     where id_presupuesto = p_id_presupuesto
       and id_subcategoria = p_id_subcategoria;
-    -- evitar division por cero
+    
     if v_monto_presupuestado is null or v_monto_presupuestado = 0 then
         return 0;
     end if;
@@ -62,20 +60,18 @@ begin
     declare v_monto_presupuestado decimal(12,2);
     declare v_monto_ejecutado decimal(12,2);
     declare v_balance decimal(12,2);
-    -- obtener monto presupuestado
+   
     select ifnull(monto_mensual,0)
     into v_monto_presupuestado
     from presupuesto_detalle
     where id_presupuesto = p_id_presupuesto
     and id_subcategoria = p_id_subcategoria;
-    -- obtener monto ejecutado
     select ifnull(sum(monto),0)
     into v_monto_ejecutado
     from transaccion
     where id_subcategoria = p_id_subcategoria
     and anio = p_anio
     and mes = p_mes;
-    -- calcular balance
     set v_balance = v_monto_presupuestado - v_monto_ejecutado;
     return v_balance;
 end $$
@@ -92,8 +88,7 @@ begin
     select ifnull(sum(pd.monto_mensual),0)
     into v_total
     from presupuesto_detalle pd
-    inner join subcategoria s
-    on pd.id_subcategoria = s.id_subcategoria
+    inner join subcategoria s on pd.id_subcategoria = s.id_subcategoria
     where s.id_categoria = p_id_categoria
     and pd.id_presupuesto = p_id_presupuesto;
     return v_total;
@@ -178,7 +173,6 @@ end $$
 delimiter ;
 
 delimiter $$
-
 drop function if exists fn_calcular_proyeccion_gasto_mensual $$
 create function fn_calcular_proyeccion_gasto_mensual(p_id_subcategoria int,p_anio int,p_mes int)
 returns decimal(12,2)
@@ -229,15 +223,8 @@ begin
     return 0.00;
     end if;
     set v_fecha_fin = last_day(curdate());
-    set v_fecha_inicio = str_to_date(
-        concat(
-        year(date_sub(curdate(), interval (p_cantidad_meses - 1) month)),
-        '-',
-        lpad(month(date_sub(curdate(), interval (p_cantidad_meses - 1) month)), 2, '0'),
-        '-01'
-        ),
-        '%Y-%m-%d'
-    );
+    set v_fecha_inicio = str_to_date(concat(year(date_sub(curdate(), interval (p_cantidad_meses - 1) month)),'-',
+    lpad(month(date_sub(curdate(), interval (p_cantidad_meses - 1) month)), 2, '0'),'-01' ),'%Y-%m-%d' );
     select ifnull(sum(t.monto), 0.00)
     into v_total_gastado
     from transaccion t
