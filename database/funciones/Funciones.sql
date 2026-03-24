@@ -122,13 +122,13 @@ returns int
 deterministic
 reads sql data
 begin
-    declare v_fecha_vencimiento date;
+    declare v_fecha_finalizacion date;
     declare v_dias_restantes int;
-    select fecha_vencimiento
-    into v_fecha_vencimiento
+    select fecha_finalizacion
+    into v_fecha_finalizacion
     from obligacion_fija
     where id_obligacion = p_id_obligacion;
-    set v_dias_restantes = datediff(v_fecha_vencimiento, curdate());
+    set v_dias_restantes = datediff(v_fecha_finalizacion, curdate());
     return v_dias_restantes;
 end $$
 delimiter ;
