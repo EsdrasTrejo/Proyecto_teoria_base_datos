@@ -105,29 +105,60 @@ CREATE TABLE obligacion_fija (
 
   constraint fk_obligacion_subcategoria
   foreign key (id_subcategoria) 
-  references subcategoria(id_subcategoria)
+  references subcategoria(id_subcategoria),
+  alter table obligacion_fija
+add constraint fk_obligacion_fija_usuario
+foreign key (id_usuario) references usuario(id_usuario)
+);
+drop table if exists obligacionfija_transaccion;
+drop table if exists transaccion;
+
+alter table obligacion_fija
+add column id_usuario int null;
+
+update obligacion_fija
+set id_usuario = 1
+where id_usuario is null;
+alter table obligacion_fija
+modify column id_usuario int not null;
+
+create table transaccion (
+    id_transaccion int auto_increment primary key,
+    id_usuario int not null,
+    id_presupuesto int not null,
+    anio int not null,
+    mes int not null,
+    id_subcategoria int not null,
+    id_obligacion int null,
+    tipo varchar(300) not null,
+    descripcion varchar(1000),
+    monto decimal(12,2) not null,
+    fecha date not null,
+    metodo_pago varchar(300),
+    num_factura varchar(300),
+    observaciones varchar(1000),
+    creado_user varchar(300) not null,
+    modificado_user varchar(300),
+    creado_fecha timestamp not null default current_timestamp,
+    modificado_fecha timestamp not null default current_timestamp on update current_timestamp,
+
+    constraint fk_transaccion_usuario
+        foreign key (id_usuario)
+        references usuario(id_usuario),
+
+    constraint fk_transaccion_presupuesto
+        foreign key (id_presupuesto)
+        references presupuesto(id_presupuesto),
+
+    constraint fk_transaccion_subcategoria
+        foreign key (id_subcategoria)
+        references subcategoria(id_subcategoria),
+
+    constraint fk_transaccion_obligacion
+        foreign key (id_obligacion)
+        references obligacion_fija(id_obligacion)
 );
 
-CREATE TABLE transaccion (
-  id_transaccion int auto_increment primary key,
-  id_presupuesto_detalle int not null,
-  year int not null,
-  mes int not null,
-  tipo_transaccion varchar(300) not null,
-  descripcion varchar(1000),
-  monto decimal(12,2) not null,
-  fecha date not null,
-  metodo_pago varchar(300),
-  num_factura varchar (300),
-  observaciones varchar(1000),
-  creado_user varchar(300) not null,
-  modificado_user varchar(300),
-  creado_fecha timestamp not null  default current_timestamp,
-  modificado_fecha timestamp not null default current_timestamp on update current_timestamp,
-  constraint fk_transaccion_presupuesto_detalle
-  foreign key (id_presupuesto_detalle) 
-  references presupuesto_detalle(id_presupuesto_detalle)
-);
 
 CREATE TABLE obligacionfija_transaccion (
   id_obligacion INT NOT NULL,
