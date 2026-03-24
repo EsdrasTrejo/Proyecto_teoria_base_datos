@@ -170,10 +170,7 @@ CREATE TABLE obligacionfija_transaccion (
     FOREIGN KEY (id_transaccion) REFERENCES transaccion(id_transaccion)
 );
 
-SELECT table_name, constraint_name
-FROM information_schema.table_constraints
-WHERE constraint_schema = DATABASE()
-  AND constraint_type = 'FOREIGN KEY';
+
 
 
 
