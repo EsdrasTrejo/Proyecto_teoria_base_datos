@@ -38,7 +38,7 @@ begin
     end if;
     
     start transaction;
-    insert into presupuesto( d_usuario,nombre,descripcion,year_inicio,mes_inicio, year_fin, mes_fin, total_ingresos, total_gastos, total_ahorro, fecha_hora_creacion,
+    insert into presupuesto( id_usuario,nombre,descripcion,year_inicio,mes_inicio, year_fin, mes_fin, total_ingresos, total_gastos, total_ahorro, fecha_hora_creacion,
     estado, creado_user, creado_fecha)
     values(p_id_usuario, p_nombre, p_descripcion, p_year_inicio, p_mes_inicio, p_year_fin, p_mes_fin, 0.00, 0.00, 0.00, current_timestamp(), 1, p_creado_por, current_timestamp());
     
@@ -220,13 +220,14 @@ delimiter ;
 call sp_procesar_obligaciones_mes(1, 2026, 10, 4003);
 
 delimiter $$
+
 drop procedure if exists sp_calcular_balance_mensual $$
-create procedure sp_calcular_balance_mensual( p_id_usuario int, p_id_presupuesto int, p_anio int, p_mes int,out p_total_ingresos decimal(12,2),
-out p_total_gastos decimal(12,2), out p_total_ahorros decimal(12,2), out p_balance_final decimal(12,2))
+
+create procedure sp_calcular_balance_mensual(p_id_usuario int,p_id_presupuesto int, p_anio int, p_mes int, out p_total_ingresos decimal(12,2), out p_total_gastos decimal(12,2),
+out p_total_ahorros decimal(12,2),out p_balance_final decimal(12,2))
 begin
 	
     declare v_existe_presupuesto int default 0;
-
     if p_mes < 1 or p_mes > 12 then
     signal sqlstate '45000'
     set message_text = 'mes invalido';
@@ -243,23 +244,27 @@ begin
     set message_text = 'el presupuesto no existe o no pertenece al usuario';
     end if;
 
-    select ifnull(sum(case when lower(t.tipo_transaccion) = 'ingreso' then t.monto else 0 end), 0.00),
-    ifnull(sum(case when lower(t.tipo_transaccion) = 'gasto' then t.monto else 0 end), 0.00),
-    ifnull(sum(case when lower(t.tipo_transaccion) = 'ahorro' then t.monto else 0 end), 0.00)
+    select
+    ifnull(sum(case when lower(t.tipo) = 'ingreso' then t.monto else 0 end), 0.00),
+    ifnull(sum(case when lower(t.tipo) = 'gasto' then t.monto else 0 end), 0.00),
+    ifnull(sum(case when lower(t.tipo) = 'ahorro' then t.monto else 0 end), 0.00)
     into p_total_ingresos, p_total_gastos, p_total_ahorros
     from transaccion t
-    inner join presupuesto_detalle pd
-    on pd.id_presupuesto_detalle = t.id_presupuesto_detalle
-    inner join presupuesto p
-    on p.id_presupuesto = pd.id_presupuesto
-    where p.id_presupuesto = p_id_presupuesto and p.id_usuario = p_id_usuario
-    and t.year = p_anio and t.mes = p_mes;
+    where t.id_presupuesto = p_id_presupuesto
+      and t.id_usuario = p_id_usuario
+      and t.anio = p_anio
+      and t.mes = p_mes;
+
     set p_balance_final = p_total_ingresos - p_total_gastos - p_total_ahorros;
 end $$
 
 delimiter ;
+set @ingresos = 0;
+set @gastos = 0;
+set @ahorros = 0;
+set @balance = 0;
 
-call sp_calcular_balance_mensual(1, 4001, 2026, 10, @ingresos, @gastos, @ahorros, @balance);
+call sp_calcular_balance_mensual(1, 1, 2025, 10, @ingresos, @gastos, @ahorros, @balance);
 
 select @ingresos as total_ingresos,
        @gastos as total_gastos,
@@ -267,17 +272,16 @@ select @ingresos as total_ingresos,
        @balance as balance_final;
 
 delimiter $$
-drop procedure if exists sp_calcular_monto_ejecutado_mes $$
-create procedure sp_calcular_monto_ejecutado_mes( p_id_subcategoria int, p_id_presupuesto int, p_anio int, p_mes int,out p_monto_ejecutado decimal(12,2))
-begin
-	
-    declare v_existe_detalle int default 0;
 
+drop procedure if exists sp_calcular_monto_ejecutado_mes $$
+
+create procedure sp_calcular_monto_ejecutado_mes( p_id_subcategoria int, p_id_presupuesto int, p_anio int, p_mes int, out p_monto_ejecutado decimal(12,2))
+begin
+    declare v_existe_detalle int default 0;
     if p_mes < 1 or p_mes > 12 then
-     signal sqlstate '45000'
+    signal sqlstate '45000'
     set message_text = 'mes invalido';
     end if;
-
     select count(*)
     into v_existe_detalle
     from presupuesto_detalle
@@ -292,19 +296,22 @@ begin
     select ifnull(sum(t.monto), 0.00)
     into p_monto_ejecutado
     from transaccion t
-    inner join presupuesto_detalle pd
-     on pd.id_presupuesto_detalle = t.id_presupuesto_detalle
-    where pd.id_presupuesto = p_id_presupuesto
-    and pd.id_subcategoria = p_id_subcategoria
-    and t.year = p_anio
-    and t.mes = p_mes;
+    where t.id_presupuesto = p_id_presupuesto
+      and t.id_subcategoria = p_id_subcategoria
+      and t.anio = p_anio
+      and t.mes = p_mes;
 end $$
 
 delimiter ;
 
-call sp_calcular_monto_ejecutado_mes(1, 4001, 2026, 12, @monto);
+-- 1. Crear variable
+set @resultado = 0;
 
-select @monto as monto_ejecutado;
+-- 2. Ejecutar el SP
+call sp_calcular_monto_ejecutado_mes(16, 1, 2026, 4, @resultado);
+
+-- 3. Ver resultado
+select @resultado as monto_ejecutado;
 
 
 delimiter $$
@@ -413,7 +420,8 @@ delimiter ;
 delimiter $$
 
 drop procedure if exists sp_cerrar_presupuesto $$
-create procedure sp_cerrar_presupuesto( p_id_presupuesto int, p_modificado_por varchar(300))
+
+create procedure sp_cerrar_presupuesto( p_id_presupuesto int,p_modificado_por varchar(300))
 begin
     declare v_existe_presupuesto int default 0;
     declare v_year_fin int;
@@ -423,14 +431,15 @@ begin
     declare v_total_gastos decimal(12,2) default 0.00;
     declare v_total_ahorros decimal(12,2) default 0.00;
     declare v_balance_final decimal(12,2) default 0.00;
-
     declare exit handler for sqlexception
     begin
-        rollback;
-        resignal;
+    rollback;
+    resignal;
     end;
 
-    select count(*) into v_existe_presupuesto from presupuesto
+    select count(*)
+    into v_existe_presupuesto
+    from presupuesto
     where id_presupuesto = p_id_presupuesto;
 
     if v_existe_presupuesto = 0 then
@@ -438,11 +447,14 @@ begin
     set message_text = 'el presupuesto no existe';
     end if;
 
-    select year_fin, mes_fin into v_year_fin, v_mes_fin from presupuesto
+    select year_fin, mes_fin
+    into v_year_fin, v_mes_fin
+    from presupuesto
     where id_presupuesto = p_id_presupuesto;
 
     set v_fecha_fin_presupuesto = last_day(
-    str_to_date(concat(v_year_fin, '-', lpad(v_mes_fin, 2, '0'), '-01'), '%Y-%m-%d'));
+    str_to_date(concat(v_year_fin, '-', lpad(v_mes_fin, 2, '0'), '-01'), '%Y-%m-%d')
+    );
 
     if curdate() <= v_fecha_fin_presupuesto then
     signal sqlstate '45000'
@@ -451,72 +463,87 @@ begin
 
     start transaction;
 
-    update presupuesto set estado = 0, modificado_user = p_modificado_por, modificado_fecha = current_timestamp()
+    update presupuesto
+    set estado = 0,
+    modificado_user = p_modificado_por,
+    modificado_fecha = current_timestamp()
     where id_presupuesto = p_id_presupuesto;
 
-    select ifnull(sum(case when lower(t.tipo_transaccion) = 'ingreso' then t.monto else 0 end), 0.00), 
-    ifnull(sum(case when lower(t.tipo_transaccion) = 'gasto' then t.monto else 0 end), 0.00),
-    ifnull(sum(case when lower(t.tipo_transaccion) = 'ahorro' then t.monto else 0 end), 0.00)
-    into v_total_ingresos,v_total_gastos,v_total_ahorros from transaccion t
-    inner join presupuesto_detalle pd
-    on pd.id_presupuesto_detalle = t.id_presupuesto_detalle
-    where pd.id_presupuesto = p_id_presupuesto;
+    select
+    ifnull(sum(case when lower(t.tipo) = 'ingreso' then t.monto else 0 end), 0.00),
+    ifnull(sum(case when lower(t.tipo) = 'gasto' then t.monto else 0 end), 0.00),
+    ifnull(sum(case when lower(t.tipo) = 'ahorro' then t.monto else 0 end), 0.00)
+    into v_total_ingresos, v_total_gastos, v_total_ahorros
+    from transaccion t
+    where t.id_presupuesto = p_id_presupuesto;
 
     set v_balance_final = v_total_ingresos - v_total_gastos - v_total_ahorros;
 
     commit;
 
-    select p_id_presupuesto as id_presupuesto, v_fecha_fin_presupuesto as fecha_fin_presupuesto, v_total_ingresos as total_ingresos_ejecutados,
-    v_total_gastos as total_gastos_ejecutados, v_total_ahorros as total_ahorros_ejecutados, v_balance_final as balance_final, 'presupuesto cerrado correctamente' as mensaje;
+    select
+        p_id_presupuesto as id_presupuesto,
+        v_fecha_fin_presupuesto as fecha_fin_presupuesto,
+        v_total_ingresos as total_ingresos_ejecutados,
+        v_total_gastos as total_gastos_ejecutados,
+        v_total_ahorros as total_ahorros_ejecutados,
+        v_balance_final as balance_final,
+        'presupuesto cerrado correctamente' as mensaje;
 end $$
+
 delimiter ;
 
 
 delimiter $$
+
 drop procedure if exists sp_obtener_resumen_categoria_mes $$
-create procedure sp_obtener_resumen_categoria_mes( p_id_categoria int, p_id_presupuesto int, p_anio int, p_mes int, out p_monto_presupuestado decimal(12,2),
+
+create procedure sp_obtener_resumen_categoria_mes( p_id_categoria int,p_id_presupuesto int,p_anio int, p_mes int, out p_monto_presupuestado decimal(12,2),
 out p_monto_ejecutado decimal(12,2), out p_porcentaje decimal(12,2))
 begin
     declare v_existe_categoria int default 0;
     declare v_existe_presupuesto int default 0;
-
     if p_mes < 1 or p_mes > 12 then
-     signal sqlstate '45000'
+    signal sqlstate '45000'
     set message_text = 'mes invalido';
     end if;
 
-    select count(*) into v_existe_categoria from categoria
+    select count(*)
+    into v_existe_categoria
+    from categoria
     where id_categoria = p_id_categoria;
+
     if v_existe_categoria = 0 then
     signal sqlstate '45000'
     set message_text = 'la categoria no existe';
     end if;
-    select count(*) into v_existe_presupuesto from presupuesto
+
+    select count(*)
+    into v_existe_presupuesto
+    from presupuesto
     where id_presupuesto = p_id_presupuesto;
-    
+
     if v_existe_presupuesto = 0 then
     signal sqlstate '45000'
-     set message_text = 'el presupuesto no existe';
+    set message_text = 'el presupuesto no existe';
     end if;
 
     select ifnull(sum(pd.monto_mensual), 0.00)
     into p_monto_presupuestado
     from presupuesto_detalle pd
     inner join subcategoria s
-    on s.id_subcategoria = pd.id_subcategoria
+   on s.id_subcategoria = pd.id_subcategoria
     where pd.id_presupuesto = p_id_presupuesto
       and s.id_categoria = p_id_categoria;
 
     select ifnull(sum(t.monto), 0.00)
     into p_monto_ejecutado
     from transaccion t
-    inner join presupuesto_detalle pd
-    on pd.id_presupuesto_detalle = t.id_presupuesto_detalle
     inner join subcategoria s
-    on s.id_subcategoria = pd.id_subcategoria
-    where pd.id_presupuesto = p_id_presupuesto
+    on s.id_subcategoria = t.id_subcategoria
+    where t.id_presupuesto = p_id_presupuesto
     and s.id_categoria = p_id_categoria
-    and t.year = p_anio
+    and t.anio = p_anio
     and t.mes = p_mes;
 
     if p_monto_presupuestado = 0 then
@@ -527,5 +554,7 @@ begin
 end $$
 
 delimiter ;
+
+call sp_obtener_resumen_categoria_mes(1, 1, 2025, 1, @presupuestado, @ejecutado, @porcentaje);
 
 

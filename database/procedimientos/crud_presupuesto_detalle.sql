@@ -11,10 +11,9 @@ begin
      set message_text = 'el id del presupuesto es invalido';
     end if;
     if not exists ( select 1 from presupuesto
-        where id_presupuesto = p_id_presupuesto
-    ) then
-     signal sqlstate '45000'
-     set message_text = 'el presupuesto no existe';
+    where id_presupuesto = p_id_presupuesto) then
+    signal sqlstate '45000'
+    set message_text = 'el presupuesto no existe';
     end if;
     if p_id_subcategoria is null or p_id_subcategoria <= 0 then
     signal sqlstate '45000'
@@ -38,8 +37,7 @@ begin
     set message_text = 'el usuario creador no puede ser nulo o vacio';
     end if;
     if exists ( select 1 from presupuesto_detalle
-     where id_presupuesto = p_id_presupuesto and id_subcategoria = p_id_subcategoria
-    ) then
+    where id_presupuesto = p_id_presupuesto and id_subcategoria = p_id_subcategoria) then
     signal sqlstate '45000'
     set message_text = 'ya existe un detalle para esa subcategoria en ese presupuesto';
     end if;
@@ -48,6 +46,8 @@ begin
     trim(p_creado_por),current_timestamp);
 end $$
 delimiter ;
+
+
 
 delimiter $$ 
 drop procedure if exists sp_actualizar_presupuesto_detalle $$
@@ -60,8 +60,7 @@ begin
     end if;
 
     if not exists ( select 1  from presupuesto_detalle
-        where id_presupuesto_detalle = p_id_detalle
-    ) then
+    where id_presupuesto_detalle = p_id_detalle) then
     
     signal sqlstate '45000'
     set message_text = 'el detalle del presupuesto no existe';
@@ -85,28 +84,31 @@ begin
 end $$ 
 delimiter ;
 
-delimiter $$ 
+delimiter $$
+
 drop procedure if exists sp_eliminar_presupuesto_detalle $$
 create procedure sp_eliminar_presupuesto_detalle(p_id_detalle int)
-begin 
+begin
     if p_id_detalle is null or p_id_detalle <= 0 then
-    signal sqlstate '45000'
-     set message_text = 'el id del detalle es invalido';
+        signal sqlstate '45000'
+        set message_text = 'el id del detalle es invalido';
     end if;
-    if not exists ( select 1 from presupuesto_detalle
-    where id_presupuesto_detalle = p_id_detalle) then
-    signal sqlstate '45000'
-    set message_text = 'el detalle del presupuesto no existe';
+
+    if not exists (
+        select 1
+        from presupuesto_detalle
+        where id_presupuesto_detalle = p_id_detalle
+    ) then
+        signal sqlstate '45000'
+        set message_text = 'el detalle del presupuesto no existe';
     end if;
-    if exists ( select 1 from transaccion
-    where id_presupuesto_detalle = p_id_detalle) then
-    signal sqlstate '45000'
-    set message_text = 'no se puede eliminar el detalle porque tiene transacciones asociadas';
-    end if;
+
     delete from presupuesto_detalle
     where id_presupuesto_detalle = p_id_detalle;
-end $$ 
+end $$
+
 delimiter ;
+call sp_eliminar_presupuesto_detalle(12);
 
 delimiter $$
 drop procedure if exists sp_consultar_presupuesto_detalle $$ 

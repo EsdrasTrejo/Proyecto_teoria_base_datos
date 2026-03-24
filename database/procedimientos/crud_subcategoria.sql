@@ -116,7 +116,7 @@ begin
 end $$ 
 delimiter ; 
 
-call sp_consultar_subcategoria(1);
+call sp_consultar_subcategoria(8);
 
 delimiter $$
 
@@ -150,6 +150,7 @@ begin
 end $$
 delimiter ;
 
+call sp_eliminar_subcategoria(18);
 
 delimiter $$
 drop procedure if exists sp_listar_subcategoria $$

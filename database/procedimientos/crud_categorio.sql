@@ -1,4 +1,5 @@
 use presupuesto_personal_proyecto;
+
 ALTER TABLE categoria AUTO_INCREMENT = 2001;
 delimiter $$
 
@@ -118,9 +119,7 @@ delimiter ;
 call sp_consultar_categoria(2001);
 
 delimiter $$
-
 drop procedure if exists sp_eliminar_categoria $$
-
 create procedure sp_eliminar_categoria( p_id_categoria int)
 begin
     if p_id_categoria is null or p_id_categoria <= 0 then
@@ -132,7 +131,7 @@ begin
     signal sqlstate '45000'
     set message_text = 'la categoria no existe';
     end if;
-    if exists ( select 1from subcategoria
+    if exists ( select 1 from subcategoria
     where id_categoria = p_id_categoria
     and indicador_activa = 1) then
     signal sqlstate '45000'
@@ -143,6 +142,8 @@ begin
 end $$
 
 delimiter ;
+
+call sp_eliminar_categoria(7);
 
 
 delimiter $$ 

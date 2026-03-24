@@ -36,6 +36,16 @@ begin
     signal sqlstate '45000'
     set message_text = 'la subcategoria no existe';
     end if;
+    
+    
+    if p_id_obligacion is not null and p_id_obligacion <> 0 then
+    if not exists (select 1 from obligacion_fija
+    where id_obligacion = p_id_obligacion) then
+    signal sqlstate '45000'
+    set message_text = 'la obligacion fija no existe';
+    end if;
+    end if;
+
 
     if p_anio is null or p_anio <= 0 then
     signal sqlstate '45000'
@@ -79,12 +89,29 @@ begin
 
     insert into transaccion(id_usuario, id_presupuesto, anio, mes, id_subcategoria, id_obligacion, tipo, descripcion, monto, fecha, metodo_pago,num_factura, observaciones,
     creado_user,creado_fecha)
-    values(p_id_usuario,p_id_presupuesto,p_anio, p_mes, p_id_subcategoria, p_id_obligacion, trim(p_tipo), case when p_descripcion is null then null else trim(p_descripcion) end,
+    values(p_id_usuario,p_id_presupuesto,p_anio, p_mes, p_id_subcategoria, case when p_id_obligacion is null or p_id_obligacion = 0 then null else p_id_obligacion end
+    , trim(p_tipo), case when p_descripcion is null then null else trim(p_descripcion) end,
     p_monto,p_fecha,trim(p_metodo_pago),case when p_num_factura is null then null else trim(p_num_factura) end,case when p_observaciones is null then null else trim(p_observaciones) end,
     trim(p_creado_por),current_timestamp);
 end $$
 
 delimiter ;
+
+call sp_insertar_transaccion(
+    1, 1, 2026, 3, 1,
+    0,  -- 👈 ESTE ES EL CASO CLAVE
+    'gasto',
+    'test sin obligacion',
+    100,
+    '2026-03-22',
+    'efectivo',
+    null,
+    null,
+    'test'
+);
+
+show create procedure sp_insertar_transaccion;
+describe transaccion;
 
 delimiter $$ 
 drop procedure if exists sp_actualizar_transaccion $$
@@ -148,23 +175,20 @@ delimiter $$
 drop procedure if exists sp_eliminar_transaccion $$
 create procedure sp_eliminar_transaccion(p_id_transaccion int)
 begin 
-	
-     if p_id_transaccion is null or p_id_transaccion <= 0 then
-     signal sqlstate '45000'
-      set message_text = 'el id de la transaccion es invalido';
-     end if;
+    if p_id_transaccion is null or p_id_transaccion <= 0 then
+    signal sqlstate '45000'
+     set message_text = 'el id de la transaccion es invalido';
+    end if;
 
-    if not exists ( select 1 from transaccion where id_transaccion = p_id_transaccion) then
+    if not exists ( select 1 from transaccion
+    where id_transaccion = p_id_transaccion) then
     signal sqlstate '45000'
     set message_text = 'la transaccion no existe';
     end if;
-
-    if exists ( select 1 from meta_ahorro_movimiento where id_transaccion = p_id_transaccion ) then
-    signal sqlstate '45000'
-    set message_text = 'no se puede eliminar la transaccion porque afecta una meta de ahorro';
-    end if;
+  
     delete from transaccion
     where id_transaccion = p_id_transaccion;
+
 end $$ 
 delimiter ;
 
@@ -180,7 +204,7 @@ delimiter $$
 drop procedure if exists sp_listar_transaccion $$
 create procedure sp_listar_transaccion(p_id_presupuesto int )
 begin 
-	select id_transaccion, nombre from transaccion  where id_presupuesto = p_id_presupuesto;
+	select id_transaccion, descripcion from transaccion  where id_presupuesto = p_id_presupuesto;
 end $$ 
 delimiter ; 
 
