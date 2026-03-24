@@ -1,117 +1,130 @@
-Table usuario{
-  id_usuario int [primary key]
-  nombre varchar(300)
-  apellido varchar(300)
-  correo varchar(300)
-  fecha_registro date
-  salario_mensual int
-  estado tinyint
-  creado_user varchar(300)
+Table usuario {
+  id_usuario int [pk, increment]
+  nombre varchar(300) [not null]
+  apellido varchar(300) [not null]
+  correo varchar(300) [not null, unique]
+  fecha_registro date [not null]
+  salario_mensual int [not null]
+  estado boolean [not null]
+  creador_user varchar(300) [not null]
+  modificado_por_user varchar(300)
+  creado_en timestamp [not null]
+  modificado_en timestamp [not null]
+}
+
+Table presupuesto {
+  id_presupuesto int [pk, increment]
+  id_usuario int [not null]
+  nombre varchar(300) [not null]
+  year_inicio int [not null]
+  mes_inicio int [not null]
+  year_fin int [not null]
+  mes_fin int [not null]
+  total_ingresos decimal(12,2) [not null]
+  total_gastos decimal(12,2) [not null]
+  total_ahorro decimal(12,2) [not null]
+  fecha_hora_creacion timestamp [not null]
+  estado boolean [not null]
+  creado_user varchar(300) [not null]
   modificado_user varchar(300)
-  creado_fecha timestamp
-  modificado_fecha timestamp
+  creado_fecha timestamp [not null]
+  modificado_fecha timestamp [not null]
 }
 
-Table presupuesto{
-  id_presupuesto int [primary key]
-  id_usuario int
-  nombre varchar(300)
-  year_inicio int
-  mes_inicio int
-  year_fin int
-  mes_fin int
-  total_ingresos decimal(12,2)
-  total_gastos decimal(12,2)
-  total_ahorro  decimal(12,2)
-  fecha_hora_creacion timestamp
-  estado tinyint
-  creado_user varchar(300)
-  modificado_user varchar(300)
-  creado_fecha timestamp
-  modificado_fecha timestamp
-}
-
-Table categoria{
-  id_categoria int [primary key]
-  nombre varchar(300)
-  descripcion varchar(300)
-  tipo varchar(300)
-  creado_user varchar(300)
-  modificado_user varchar(300)
-  creado_fecha timestamp
-  modificado_fecha timestamp
-}
-
-Table subcategoria{
-  id_subcategoria int [primary key]
-  id_categoria int
-  nombre varchar(300)
-  descripcion varchar(300)
-  indicador_activa tinyint
-  es_defecto tinyint
-  creado_user varchar(300)
-  modificado_user varchar(300)
-  creado_fecha timestamp
-  modificado_fecha timestamp
-}
-
-Table presupuesto_detalle{
-  id_presupuesto_detalle int [primary key]
-  id_presupuesto int
-  id_subcategoria int
-  monto_mensual decimal(12,2)
-  observaciones varchar(1000)
-  creado_user varchar(300)
-  modificado_user varchar(300)
-  creado_fecha timestamp
-  modificado_fecha timestamp
-}
-
-Table obligacion_fija{
-  id_obligacion int [primary key]
-  id_subcategoria int
-  nombre varchar(300)
-  descripcion varchar(500)
-  monto_mensual decimal(12,2)
-  dia_vencimiento int
-  vigente tinyint
-  fecha_inicio date
-  fecha_finalizacion date
-  creado_user varchar(300)
-  modificado_user varchar(300)
-  creado_fecha timestamp
-  modificado_fecha timestamp
-}
-
-table obligacionfija_transaccion{
-  id_obligacion int 
-  id_transaccion int 
-}
-
-Table transaccion{
-  id_transaccion int [primary key]
-  id_presupuestodetalle int
-  year int
-  mes int
-  tipo_transaccion varchar(300)
+Table categoria {
+  id_categoria int [pk, increment]
+  id_usuario_propetario int [not null]
+  nombre varchar(300) [not null]
   descripcion varchar(1000)
-  monto decimal(12,2)
-  fecha date
+  tipo varchar(300) [not null]
+  creado_user varchar(300) [not null]
+  modificado_user varchar(300)
+  creado_fecha timestamp [not null]
+  modificado_fecha timestamp [not null]
+}
+
+Table subcategoria {
+  id_subcategoria int [pk, increment]
+  id_categoria int [not null]
+  nombre varchar(300) [not null]
+  descripcion varchar(300)
+  indicador_activa boolean [not null]
+  es_defecto boolean [not null]
+  creado_user varchar(300) [not null]
+  modificado_user varchar(300)
+  creado_fecha timestamp [not null]
+  modificado_fecha timestamp [not null]
+}
+
+Table presupuesto_detalle {
+  id_presupuesto_detalle int [pk, increment]
+  id_presupuesto int [not null]
+  id_subcategoria int [not null]
+  monto_mensual decimal(12,2) [not null]
+  observaciones varchar(1000)
+  creado_user varchar(300) [not null]
+  modificado_user varchar(300)
+  creado_fecha timestamp [not null]
+  modificado_fecha timestamp [not null]
+}
+
+Table obligacion_fija {
+  id_obligacion int [pk, increment]
+  id_subcategoria int [not null]
+  id_usuario int [not null]
+  nombre varchar(300) [not null]
+  descripcion varchar(500)
+  monto_mensual decimal(12,2) [not null]
+  dia_vencimiento int [not null]
+  vigente boolean [not null]
+  fecha_inicio date [not null]
+  fecha_finalizacion date
+  creado_user varchar(300) [not null]
+  modificado_user varchar(300)
+  creado_fecha timestamp [not null]
+  modificado_fecha timestamp [not null]
+}
+
+Table transaccion {
+  id_transaccion int [pk, increment]
+  id_usuario int [not null]
+  id_presupuesto int [not null]
+  anio int [not null]
+  mes int [not null]
+  id_subcategoria int [not null]
+  id_obligacion int
+  tipo varchar(300) [not null]
+  descripcion varchar(1000)
+  monto decimal(12,2) [not null]
+  fecha date [not null]
   metodo_pago varchar(300)
   num_factura varchar(300)
   observaciones varchar(1000)
-  creado_user varchar(300)
+  creado_user varchar(300) [not null]
   modificado_user varchar(300)
-  creado_fecha timestamp
-  modificado_fecha timestamp
+  creado_fecha timestamp [not null]
+  modificado_fecha timestamp [not null]
 }
 
-Ref: "usuario"."id_usuario" < "presupuesto"."id_usuario"
-Ref: "categoria"."id_categoria" < "subcategoria"."id_categoria"
-Ref: "presupuesto"."id_presupuesto" < "presupuesto_detalle"."id_presupuesto"
-Ref: "subcategoria"."id_subcategoria" < "presupuesto_detalle"."id_subcategoria"
-Ref: "subcategoria"."id_subcategoria" < "obligacion_fija"."id_subcategoria"
-Ref: "obligacion_fija"."id_obligacion" < "obligacionfija_transaccion"."id_obligacion"
-Ref: "transaccion"."id_transaccion" < "obligacionfija_transaccion"."id_transaccion"
+Table obligacionfija_transaccion {
+  id_obligacion int [not null]
+  id_transaccion int [not null]
 
-Ref: "presupuesto_detalle"."id_presupuesto_detalle" < "transaccion"."id_presupuestodetalle"
+  indexes {
+    (id_obligacion, id_transaccion) [pk]
+  }
+}
+
+Ref: presupuesto.id_usuario > usuario.id_usuario
+Ref: categoria.id_usuario_propetario > usuario.id_usuario
+Ref: subcategoria.id_categoria > categoria.id_categoria
+Ref: presupuesto_detalle.id_presupuesto > presupuesto.id_presupuesto
+Ref: presupuesto_detalle.id_subcategoria > subcategoria.id_subcategoria
+Ref: obligacion_fija.id_subcategoria > subcategoria.id_subcategoria
+Ref: obligacion_fija.id_usuario > usuario.id_usuario
+Ref: transaccion.id_usuario > usuario.id_usuario
+Ref: transaccion.id_presupuesto > presupuesto.id_presupuesto
+Ref: transaccion.id_subcategoria > subcategoria.id_subcategoria
+Ref: transaccion.id_obligacion > obligacion_fija.id_obligacion
+Ref: obligacionfija_transaccion.id_obligacion > obligacion_fija.id_obligacion
+Ref: obligacionfija_transaccion.id_transaccion > transaccion.id_transaccion
